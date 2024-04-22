@@ -81,8 +81,56 @@ class InnerNode extends BPlusNode {
     @Override
     public LeafNode get(DataBox key) {
         // TODO(proj2): implement
-
-        return null;
+        int i=0,j=keys.size()-1;
+        int middle=0;
+        while(i<=j){
+            middle=(i+j)/2;
+            if(keys.get(middle).compareTo(key)==0){
+                long pageNum=children.get(middle+1);
+                Page page=bufferManager.fetchPage(treeContext,pageNum);
+                Buffer buf=page.getBuffer();
+                byte mark=buf.get();
+                page.unpin();
+                if(mark==0){
+                    return InnerNode.fromBytes(metadata,bufferManager,treeContext,pageNum).get(key);
+                }
+                else{
+                    return LeafNode.fromBytes(metadata,bufferManager,treeContext,pageNum).get(key);
+                }
+            } else if (keys.get(middle).compareTo(key)<0) {
+                i=middle+1;
+            }
+            else{
+                j=middle-1;
+            }
+        }
+        middle=(i+j)/2;
+        if(keys.get(middle).compareTo(key)<0){
+            long pageNum=children.get(middle+1);
+            Page page=bufferManager.fetchPage(treeContext,pageNum);
+            Buffer buf=page.getBuffer();
+            byte mark=buf.get();
+            page.unpin();
+            if(mark==0){
+                return InnerNode.fromBytes(metadata,bufferManager,treeContext,pageNum).get(key);
+            }
+            else{
+                return LeafNode.fromBytes(metadata,bufferManager,treeContext,pageNum).get(key);
+            }
+        }
+        else{
+            long pageNum=children.get(middle);
+            Page page=bufferManager.fetchPage(treeContext,pageNum);
+            Buffer buf=page.getBuffer();
+            byte mark=buf.get();
+            page.unpin();
+            if(mark==0){
+                return InnerNode.fromBytes(metadata,bufferManager,treeContext,pageNum).get(key);
+            }
+            else{
+                return LeafNode.fromBytes(metadata,bufferManager,treeContext,pageNum).get(key);
+            }
+        }
     }
 
     // See BPlusNode.getLeftmostLeaf.

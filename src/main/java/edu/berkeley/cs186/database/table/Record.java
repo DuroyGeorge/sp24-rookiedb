@@ -9,7 +9,9 @@ import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.List;
 
-/** A Record is just list of DataBoxes. */
+/**
+ * A Record is just list of DataBoxes.
+ */
 public class Record {
     private List<DataBox> values;
 
@@ -64,7 +66,7 @@ public class Record {
      * Takes a byte[] and decodes it into a Record. This method assumes that the
      * input byte[] represents a record that corresponds to this schema.
      *
-     * @param buf the byte array to decode
+     * @param buf    the byte array to decode
      * @param schema the schema used for this record
      * @return the decoded Record
      */
@@ -79,7 +81,9 @@ public class Record {
     /**
      * @return the number of values in this record
      */
-    public int size() {return values.size();}
+    public int size() {
+        return values.size();
+    }
 
     @Override
     public String toString() {

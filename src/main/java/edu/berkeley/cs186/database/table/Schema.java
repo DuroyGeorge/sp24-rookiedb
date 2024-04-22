@@ -13,11 +13,11 @@ import java.util.Objects;
 /**
  * The schema of a table includes the name and type of every one of its
  * fields. For example, the following schema:
- *
- *   Schema s = new Schema()
- *      .add("x", Type.intType())
- *      .add("y", Type.floatType());
- *
+ * <p>
+ * Schema s = new Schema()
+ * .add("x", Type.intType())
+ * .add("y", Type.floatType());
+ * <p>
  * represents a table with an int field named "x" and a float field named "y".
  */
 public class Schema {
@@ -37,6 +37,7 @@ public class Schema {
     /**
      * Adds a new field to the schema. Returns the schema so that calls can be
      * chained together (see example above).
+     *
      * @param fieldName the name of the new field
      * @param fieldType the type of the new field
      * @return the schema that the field was added to
@@ -66,18 +67,24 @@ public class Schema {
      * @param i
      * @return the name of the field at the index `i`
      */
-    public String getFieldName(int i) { return fieldNames.get(i); }
+    public String getFieldName(int i) {
+        return fieldNames.get(i);
+    }
 
     /**
      * @param i
      * @return the type of the field at the index `i`
      */
-    public Type getFieldType(int i) { return fieldTypes.get(i); }
+    public Type getFieldType(int i) {
+        return fieldTypes.get(i);
+    }
 
     /**
      * @return the number of fields in this schema
      */
-    public int size() { return this.fieldNames.size(); }
+    public int size() {
+        return this.fieldNames.size();
+    }
 
     /**
      * @return the size of this schema in bytes after being serialized
@@ -116,8 +123,8 @@ public class Schema {
 
     /**
      * @param fieldName
-     * @throws RuntimeException if no field found, or ambiguous field name
      * @return finds the index of the field corresponding to fieldName
+     * @throws RuntimeException if no field found, or ambiguous field name
      */
     public int findField(String fieldName) {
         int index = -1;
@@ -153,7 +160,7 @@ public class Schema {
         copy.fieldTypes = new ArrayList<>(fieldTypes);
         copy.fieldNames = new ArrayList<>(fieldNames);
         copy.sizeInBytes = sizeInBytes;
-        for(int i = 0; i < other.size(); i++)
+        for (int i = 0; i < other.size(); i++)
             copy.add(other.fieldNames.get(i), other.fieldTypes.get(i));
         return copy;
     }
@@ -163,17 +170,18 @@ public class Schema {
      * implicit casts:
      * - String's of the wrong size are cast to the expected size of the schema
      * - Int's will be cast to floats if a float is expected
+     *
      * @param record
-     * @throws DatabaseException if a field of the record does not match the
-     * type of the corresponding field in the schema, and cannot be implicitly
-     * cast to the correct field
      * @return A new record with fields cast to match the schema
+     * @throws DatabaseException if a field of the record does not match the
+     *                           type of the corresponding field in the schema, and cannot be implicitly
+     *                           cast to the correct field
      */
     public Record verify(Record record) {
         List<DataBox> values = record.getValues();
         if (values.size() != fieldNames.size()) {
             String err = String.format("Expected %d values, but got %d.",
-                                       fieldNames.size(), values.size());
+                fieldNames.size(), values.size());
             throw new DatabaseException(err);
         }
 
@@ -181,21 +189,21 @@ public class Schema {
             Type actual = values.get(i).type();
             Type expected = fieldTypes.get(i);
             if (!actual.equals(expected)) {
-                if(actual.getTypeId() == TypeId.STRING && expected.getTypeId() == TypeId.STRING) {
+                if (actual.getTypeId() == TypeId.STRING && expected.getTypeId() == TypeId.STRING) {
                     // Implicit cast
                     DataBox wrongSize = values.get(i);
                     values.set(i, new StringDataBox(wrongSize.getString(), expected.getSizeInBytes()));
                     continue;
                 }
-                if(actual.getTypeId() == TypeId.INT && expected.getTypeId() == TypeId.FLOAT) {
+                if (actual.getTypeId() == TypeId.INT && expected.getTypeId() == TypeId.FLOAT) {
                     // Implicit cast
                     DataBox intBox = values.get(i);
                     values.set(i, new FloatDataBox((float) intBox.getInt()));
                     continue;
                 }
                 String err = String.format(
-                                 "Expected field %d to be of type %s, but got value of type %s.",
-                                 i, expected, actual);
+                    "Expected field %d to be of type %s, but got value of type %s.",
+                    i, expected, actual);
                 throw new DatabaseException(err);
             }
         }
