@@ -155,16 +155,55 @@ class LeafNode extends BPlusNode {
     @Override
     public LeafNode getLeftmostLeaf() {
         // TODO(proj2): implement
-
-        return null;
+        return this;
     }
 
     // See BPlusNode.put.
     @Override
     public Optional<Pair<DataBox, Long>> put(DataBox key, RecordId rid) {
         // TODO(proj2): implement
-
-        return Optional.empty();
+        if (keys.size() == 0) {
+            keys.add(key);
+            rids.add(rid);
+            sync();
+            return Optional.empty();
+        }
+        //Find the right position of the key
+        int i = 0, j = keys.size() - 1, middle;
+        while (i < j) {
+            middle = (i + j) / 2;
+            if (keys.get(middle).compareTo(key) == 0) {
+                throw new BPlusTreeException("Duplicate key!");
+            } else if (keys.get(middle).compareTo(key) < 0) {
+                i = middle + 1;
+            } else {
+                j = middle - 1;
+            }
+        }
+        int pos;
+        if (keys.get(i).compareTo(key) < 0) {
+            pos = i + 1;
+        } else if(keys.get(i).compareTo(key)>0){
+            pos = i;
+        }else{
+            throw new BPlusTreeException("Duplicate key!");
+        }
+        keys.add(pos, key);
+        rids.add(pos, rid);
+        if (keys.size() > 2 * metadata.getOrder()) {
+            //split
+            List<DataBox> newkeys = new ArrayList<>(keys.subList(metadata.getOrder(), keys.size()));
+            List<RecordId> newrids = new ArrayList<>(rids.subList(metadata.getOrder(), rids.size()));
+            keys.subList(metadata.getOrder(), keys.size()).clear();
+            rids.subList(metadata.getOrder(), rids.size()).clear();
+            LeafNode newLeaf = new LeafNode(metadata, bufferManager, newkeys, newrids, rightSibling, treeContext);
+            rightSibling = Optional.of(newLeaf.getPage().getPageNum());
+            sync();
+            return Optional.of(new Pair<>(newLeaf.getKeys().get(0), newLeaf.getPage().getPageNum()));
+        } else {
+            sync();
+            return Optional.empty();
+        }
     }
 
     // See BPlusNode.bulkLoad.
