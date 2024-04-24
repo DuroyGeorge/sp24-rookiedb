@@ -82,6 +82,12 @@ class InnerNode extends BPlusNode {
     @Override
     public LeafNode get(DataBox key) {
         // TODO(proj2): implement
+        if(children.isEmpty()){
+            throw new BPlusTreeException("No children in InnerNode");
+        } else if (keys.isEmpty()) {
+            long pageNum = children.get(0);
+            return BPlusNode.fromBytes(metadata, bufferManager, treeContext, pageNum).get(key);
+        }
         int i = 0, j = keys.size() - 1, middle = (i + j) / 2;
         while (i < j) {
             middle = (i + j) / 2;
@@ -123,6 +129,26 @@ class InnerNode extends BPlusNode {
     @Override
     public Optional<Pair<DataBox, Long>> put(DataBox key, RecordId rid) {
         // TODO(proj2): implement
+        if (keys.isEmpty()) {
+            if (children.isEmpty()) {
+                LeafNode leaf = new LeafNode(metadata, bufferManager, Collections.singletonList(key), Collections.singletonList(rid), Optional.empty(), treeContext);
+                long leafPageNum = leaf.getPage().getPageNum();
+                children.add(leafPageNum);
+                sync();
+                return Optional.empty();
+            } else {
+                Optional<Pair<DataBox, Long>> res = BPlusNode.fromBytes(metadata, bufferManager, treeContext, children.get(0)).put(key, rid);
+                if (!res.isPresent()) {
+                    sync();
+                    return res;
+                } else {
+                    keys.add(res.get().getFirst());
+                    children.add(res.get().getSecond());
+                    sync();
+                    return Optional.empty();
+                }
+            }
+        }
         int i = 0, j = keys.size() - 1, middle = (i + j) / 2;
         while (i < j) {
             middle = (i + j) / 2;
@@ -233,6 +259,14 @@ class InnerNode extends BPlusNode {
     @Override
     public void remove(DataBox key) {
         // TODO(proj2): implement
+        if (children.isEmpty()) {
+            return;
+        }
+        else if (keys.isEmpty()) {
+            BPlusNode.fromBytes(metadata, bufferManager, treeContext, children.get(0)).remove(key);
+            sync();
+            return;
+        }
         int i = 0, j = keys.size() - 1, middle = (i + j) / 2;
         while (i < j) {
             middle = (i + j) / 2;

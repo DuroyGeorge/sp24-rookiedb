@@ -239,6 +239,9 @@ class LeafNode extends BPlusNode {
     @Override
     public void remove(DataBox key) {
         // TODO(proj2): implement
+        if (keys.isEmpty()) {
+            return;
+        }
         int i = 0, j = keys.size() - 1, middle = (i + j) / 2;
         while (i < j) {
             middle = (i + j) / 2;
@@ -256,8 +259,8 @@ class LeafNode extends BPlusNode {
         if (keys.get(i).compareTo(key) == 0) {
             keys.remove(i);
             rids.remove(i);
+            sync();
         }
-        sync();
     }
 
     // Iterators ///////////////////////////////////////////////////////////////
