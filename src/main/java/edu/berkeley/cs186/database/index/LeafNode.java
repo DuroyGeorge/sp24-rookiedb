@@ -183,9 +183,9 @@ class LeafNode extends BPlusNode {
         int pos;
         if (keys.get(i).compareTo(key) < 0) {
             pos = i + 1;
-        } else if(keys.get(i).compareTo(key)>0){
+        } else if (keys.get(i).compareTo(key) > 0) {
             pos = i;
-        }else{
+        } else {
             throw new BPlusTreeException("Duplicate key!");
         }
         keys.add(pos, key);
@@ -211,7 +211,27 @@ class LeafNode extends BPlusNode {
     public Optional<Pair<DataBox, Long>> bulkLoad(Iterator<Pair<DataBox, RecordId>> data,
                                                   float fillFactor) {
         // TODO(proj2): implement
-
+        if (fillFactor < 0 || fillFactor > 1) {
+            throw new BPlusTreeException("Invalid fill factor");
+        }
+        int full = (int) Math.ceil(2 * metadata.getOrder() * fillFactor);
+        while (data.hasNext()) {
+            Pair<DataBox, RecordId> node = data.next();
+            if (keys.size() >= full) {
+                List<DataBox> newkeys = new ArrayList<>();
+                List<RecordId> newrids = new ArrayList<>();
+                newkeys.add(node.getFirst());
+                newrids.add(node.getSecond());
+                LeafNode newLeaf = new LeafNode(metadata, bufferManager, newkeys, newrids, Optional.empty(), treeContext);
+                rightSibling = Optional.of(newLeaf.getPage().getPageNum());
+                sync();
+                return Optional.of(new Pair<>(newLeaf.getKeys().get(0), newLeaf.getPage().getPageNum()));
+            } else {
+                keys.add(node.getFirst());
+                rids.add(node.getSecond());
+                sync();
+            }
+        }
         return Optional.empty();
     }
 
@@ -219,8 +239,25 @@ class LeafNode extends BPlusNode {
     @Override
     public void remove(DataBox key) {
         // TODO(proj2): implement
-
-        return;
+        int i = 0, j = keys.size() - 1, middle = (i + j) / 2;
+        while (i < j) {
+            middle = (i + j) / 2;
+            if (keys.get(middle).compareTo(key) == 0) {
+                keys.remove(middle);
+                rids.remove(middle);
+                sync();
+                return;
+            } else if (keys.get(middle).compareTo(key) < 0) {
+                i = middle + 1;
+            } else {
+                j = middle - 1;
+            }
+        }
+        if (keys.get(i).compareTo(key) == 0) {
+            keys.remove(i);
+            rids.remove(i);
+        }
+        sync();
     }
 
     // Iterators ///////////////////////////////////////////////////////////////
@@ -430,7 +467,8 @@ class LeafNode extends BPlusNode {
 
         List<DataBox> keys = new ArrayList<>();
         List<RecordId> rids = new ArrayList<>();
-        Optional<Long> rightsibling = Optional.of(buf.getLong());
+        long temp = buf.getLong();
+        Optional<Long> rightsibling = temp == -1 ? Optional.empty() : Optional.of(temp);
         int n = buf.getInt();
         for (int i = 0; i < n; ++i) {
             keys.add(DataBox.fromBytes(buf, metadata.getKeySchema()));

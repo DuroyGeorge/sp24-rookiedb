@@ -82,9 +82,8 @@ class InnerNode extends BPlusNode {
     @Override
     public LeafNode get(DataBox key) {
         // TODO(proj2): implement
-        int i = 0, j = keys.size() - 1;
-        int middle = 0;
-        while (i <= j) {
+        int i = 0, j = keys.size() - 1, middle = (i + j) / 2;
+        while (i < j) {
             middle = (i + j) / 2;
             if (keys.get(middle).compareTo(key) == 0) {
                 long pageNum = children.get(middle + 1);
@@ -95,14 +94,13 @@ class InnerNode extends BPlusNode {
                 j = middle - 1;
             }
         }
-        middle = (i + j) / 2;
-        if (keys.get(middle).compareTo(key) < 0) {
-            long pageNum = children.get(middle + 1);
-            return BPlusNode.fromBytes(metadata, bufferManager, treeContext, pageNum).get(key);
+        long pageNum;
+        if (keys.get(i).compareTo(key) <= 0) {
+            pageNum = children.get(i + 1);
         } else {
-            long pageNum = children.get(middle);
-            return BPlusNode.fromBytes(metadata, bufferManager, treeContext, pageNum).get(key);
+            pageNum = children.get(i);
         }
+        return BPlusNode.fromBytes(metadata, bufferManager, treeContext, pageNum).get(key);
     }
 
     // See BPlusNode.getLeftmostLeaf.
@@ -128,18 +126,14 @@ class InnerNode extends BPlusNode {
         int i = 0, j = keys.size() - 1, middle = (i + j) / 2;
         while (i < j) {
             middle = (i + j) / 2;
-            if (keys.get(middle).compareTo(key) == 0) {
-                throw new BPlusTreeException("Duplicate key");
-            } else if (keys.get(middle).compareTo(key) < 0) {
+            if (keys.get(middle).compareTo(key) <= 0) {
                 i = middle + 1;
             } else {
                 j = middle - 1;
             }
         }
         Optional<Pair<DataBox, Long>> res = Optional.empty();
-        if (keys.get(i).compareTo(key) == 0) {
-            throw new BPlusTreeException("Duplicate key");
-        } else if (keys.get(i).compareTo(key) < 0) {
+        if (keys.get(i).compareTo(key) <= 0) {
             res = BPlusNode.fromBytes(metadata, bufferManager, treeContext, children.get(i + 1)).put(key, rid);
             if (!res.isPresent()) {
                 sync();
@@ -204,7 +198,34 @@ class InnerNode extends BPlusNode {
     public Optional<Pair<DataBox, Long>> bulkLoad(Iterator<Pair<DataBox, RecordId>> data,
                                                   float fillFactor) {
         // TODO(proj2): implement
-
+        if (fillFactor < 0 || fillFactor > 1) {
+            throw new BPlusTreeException("Invalid fill factor");
+        }
+        while (data.hasNext()) {
+            Optional<Pair<DataBox, Long>> res = BPlusNode.fromBytes(metadata, bufferManager, treeContext, children.get(children.size() - 1)).bulkLoad(data, fillFactor);
+            if (res.isPresent()) {
+                if (keys.size() < metadata.getOrder() * 2) {
+                    keys.add(res.get().getFirst());
+                    children.add(res.get().getSecond());
+                    sync();
+                } else {
+                    List<DataBox> newKeys = new ArrayList<>();
+                    List<Long> newChildren = new ArrayList<>();
+                    DataBox splitKey = keys.get(metadata.getOrder());
+                    for (int j = metadata.getOrder() + 1; j < keys.size(); j++) {
+                        newKeys.add(keys.get(j));
+                        newChildren.add(children.get(j));
+                    }
+                    newChildren.add(children.get(keys.size()));
+                    keys.subList(metadata.getOrder(), keys.size()).clear();
+                    children.subList(metadata.getOrder() + 1, children.size()).clear();
+                    InnerNode sibling = new InnerNode(metadata, bufferManager, newKeys, newChildren, treeContext);
+                    long siblingPageNum = sibling.getPage().getPageNum();
+                    sync();
+                    return Optional.of(new Pair<>(splitKey, siblingPageNum));
+                }
+            }
+        }
         return Optional.empty();
     }
 
@@ -212,8 +233,26 @@ class InnerNode extends BPlusNode {
     @Override
     public void remove(DataBox key) {
         // TODO(proj2): implement
-
-        return;
+        int i = 0, j = keys.size() - 1, middle = (i + j) / 2;
+        while (i < j) {
+            middle = (i + j) / 2;
+            if (keys.get(middle).compareTo(key) == 0) {
+                BPlusNode.fromBytes(metadata, bufferManager, treeContext, children.get(middle + 1)).remove(key);
+                sync();
+                return;
+            } else if (keys.get(middle).compareTo(key) < 0) {
+                i = middle + 1;
+            } else {
+                j = middle - 1;
+            }
+        }
+        if (keys.get(i).compareTo(key) <= 0) {
+            BPlusNode.fromBytes(metadata, bufferManager, treeContext, children.get(i + 1)).remove(key);
+            sync();
+        } else {
+            BPlusNode.fromBytes(metadata, bufferManager, treeContext, children.get(i)).remove(key);
+            sync();
+        }
     }
 
     // Helpers /////////////////////////////////////////////////////////////////

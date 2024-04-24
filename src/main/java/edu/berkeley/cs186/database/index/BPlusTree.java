@@ -11,6 +11,7 @@ import edu.berkeley.cs186.database.io.DiskSpaceManager;
 import edu.berkeley.cs186.database.memory.BufferManager;
 import edu.berkeley.cs186.database.table.RecordId;
 
+import javax.xml.crypto.Data;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.io.UncheckedIOException;
@@ -146,10 +147,8 @@ public class BPlusTree {
         typecheck(key);
         // TODO(proj4_integration): Update the following line
         LockUtil.ensureSufficientLockHeld(lockContext, LockType.NL);
-
         // TODO(proj2): implement
-        root.get(key);
-        return Optional.empty();
+        return root.get(key).getKey(key);
     }
 
     /**
@@ -204,8 +203,7 @@ public class BPlusTree {
         LockUtil.ensureSufficientLockHeld(lockContext, LockType.NL);
 
         // TODO(proj2): Return a BPlusTreeIterator.
-
-        return Collections.emptyIterator();
+        return new BPlusTreeIterator();
     }
 
     /**
@@ -237,8 +235,7 @@ public class BPlusTree {
         LockUtil.ensureSufficientLockHeld(lockContext, LockType.NL);
 
         // TODO(proj2): Return a BPlusTreeIterator.
-
-        return Collections.emptyIterator();
+        return new BPlusTreeIterator(key);
     }
 
     /**
@@ -300,8 +297,18 @@ public class BPlusTree {
         // Note: You should NOT update the root variable directly.
         // Use the provided updateRoot() helper method to change
         // the tree's root if the old root splits.
-
-        return;
+        while (data.hasNext()) {
+            Optional<Pair<DataBox, Long>> res = root.bulkLoad(data, fillFactor);
+            if (res.isPresent()) {
+                List<DataBox> newKeys = new ArrayList<>();
+                newKeys.add(res.get().getFirst());
+                List<Long> newChildren = new ArrayList<>();
+                newChildren.add(root.getPage().getPageNum());
+                newChildren.add(res.get().getSecond());
+                InnerNode newRoot = new InnerNode(metadata, bufferManager, newKeys, newChildren, lockContext);
+                updateRoot(newRoot);
+            }
+        }
     }
 
     /**
@@ -321,8 +328,7 @@ public class BPlusTree {
         LockUtil.ensureSufficientLockHeld(lockContext, LockType.NL);
 
         // TODO(proj2): implement
-
-        return;
+        root.remove(key);
     }
 
     // Helpers /////////////////////////////////////////////////////////////////
@@ -438,18 +444,50 @@ public class BPlusTree {
     // Iterator ////////////////////////////////////////////////////////////////
     private class BPlusTreeIterator implements Iterator<RecordId> {
         // TODO(proj2): Add whatever fields and constructors you want here.
+        private Optional<LeafNode> currNode;
+        private int pos;
+
+        public BPlusTreeIterator() {
+            currNode = Optional.of(root.getLeftmostLeaf());
+            pos = 0;
+        }
+
+
+        public BPlusTreeIterator(DataBox key) {
+            LeafNode temp = root.get(key);
+            while (temp.getKeys().get(temp.getKeys().size() - 1).compareTo(key) < 0) {
+                if (temp.getRightSibling().isPresent()) {
+                    temp = temp.getRightSibling().get();
+                } else {
+                    currNode = Optional.empty();
+                    pos = 0;
+                    return;
+                }
+            }
+            currNode = Optional.of(temp);
+            List<DataBox> keys = currNode.get().getKeys();
+            pos = keys.indexOf(key);
+        }
 
         @Override
         public boolean hasNext() {
             // TODO(proj2): implement
-
-            return false;
+            return currNode.isPresent() && pos < currNode.get().getKeys().size();
         }
 
         @Override
         public RecordId next() {
             // TODO(proj2): implement
-
+            if (currNode.isPresent() && pos < currNode.get().getKeys().size()) {
+                RecordId res = currNode.get().getRids().get(pos++);
+                if (pos == currNode.get().getKeys().size()) {
+                    if (currNode.get().getRightSibling().isPresent()) {
+                        currNode = currNode.get().getRightSibling();
+                        pos = 0;
+                    }
+                }
+                return res;
+            }
             throw new NoSuchElementException();
         }
     }
