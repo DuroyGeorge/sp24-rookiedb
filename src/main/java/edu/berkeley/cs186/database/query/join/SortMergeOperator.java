@@ -20,8 +20,8 @@ public class SortMergeOperator extends JoinOperator {
                              String rightColumnName,
                              TransactionContext transaction) {
         super(prepareLeft(transaction, leftSource, leftColumnName),
-              prepareRight(transaction, rightSource, rightColumnName),
-              leftColumnName, rightColumnName, transaction, JoinType.SORTMERGE);
+            prepareRight(transaction, rightSource, rightColumnName),
+            leftColumnName, rightColumnName, transaction, JoinType.SORTMERGE);
         this.stats = this.estimateStats();
     }
 
@@ -75,22 +75,21 @@ public class SortMergeOperator extends JoinOperator {
 
     /**
      * An implementation of Iterator that provides an iterator interface for this operator.
-     *    See lecture slides.
-     *
+     * See lecture slides.
+     * <p>
      * Before proceeding, you should read and understand SNLJOperator.java
-     *    You can find it in the same directory as this file.
-     *
+     * You can find it in the same directory as this file.
+     * <p>
      * Word of advice: try to decompose the problem into distinguishable sub-problems.
-     *    This means you'll probably want to add more methods than those given (Once again,
-     *    SNLJOperator.java might be a useful reference).
-     *
+     * This means you'll probably want to add more methods than those given (Once again,
+     * SNLJOperator.java might be a useful reference).
      */
     private class SortMergeIterator implements Iterator<Record> {
         /**
-        * Some member variables are provided for guidance, but there are many possible solutions.
-        * You should implement the solution that's best for you, using any member variables you need.
-        * You're free to use these member variables, but you're not obligated to.
-        */
+         * Some member variables are provided for guidance, but there are many possible solutions.
+         * You should implement the solution that's best for you, using any member variables you need.
+         * You're free to use these member variables, but you're not obligated to.
+         */
         private Iterator<Record> leftIterator;
         private BacktrackingIterator<Record> rightIterator;
         private Record leftRecord;
@@ -106,7 +105,9 @@ public class SortMergeOperator extends JoinOperator {
 
             if (leftIterator.hasNext() && rightIterator.hasNext()) {
                 leftRecord = leftIterator.next();
-                rightRecord = rightIterator.next();
+            } else {
+                leftRecord = null;
+                rightRecord = null;
             }
 
             this.marked = false;
@@ -140,7 +141,47 @@ public class SortMergeOperator extends JoinOperator {
          */
         private Record fetchNextRecord() {
             // TODO(proj3_part1): implement
-            return null;
+            if (leftRecord == null) {
+                // The left source was empty, nothing to fetch
+                return null;
+            }
+            while (true) {
+                if (rightIterator.hasNext()) {
+                    if (leftRecord == null) {
+                        return null;
+                    }
+                    // there's a next right record, join it if there's a match
+                    Record rightRecord = rightIterator.next();
+                    if (compare(leftRecord, rightRecord) == 0) {
+                        if (!marked) {
+                            rightIterator.markPrev();
+                            marked = true;
+                        }
+                        return leftRecord.concat(rightRecord);
+                    } else if (compare(leftRecord, rightRecord) < 0) {
+                        // if the left record is less than the right record, advance the left record
+                        if (leftIterator.hasNext()) {
+                            leftRecord = leftIterator.next();
+                        } else {
+                            leftRecord = null;
+                        }
+                        rightIterator.reset();
+                        marked = false;
+                    } else {
+                        // if the left record is greater than the right record, advance the right record
+                        marked = false;
+                    }
+                } else if (leftIterator.hasNext()) {
+                    // there's no more right records but there's still left
+                    // records. Advance left and reset right
+                    leftRecord = leftIterator.next();
+                    rightIterator.reset();
+                    marked = false;
+                } else {
+                    // if you're here then there are no more records to fetch
+                    return null;
+                }
+            }
         }
 
         @Override

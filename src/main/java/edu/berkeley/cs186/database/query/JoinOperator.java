@@ -15,6 +15,7 @@ public abstract class JoinOperator extends QueryOperator {
         SHJ,
         GHJ
     }
+
     protected JoinType joinType;
 
     // the source operators
@@ -36,17 +37,17 @@ public abstract class JoinOperator extends QueryOperator {
      * Create a join operator that pulls tuples from leftSource and rightSource.
      * Returns tuples for which leftColumnName and rightColumnName are equal.
      *
-     * @param leftSource the left source operator
-     * @param rightSource the right source operator
-     * @param leftColumnName the column to join on from leftSource
+     * @param leftSource      the left source operator
+     * @param rightSource     the right source operator
+     * @param leftColumnName  the column to join on from leftSource
      * @param rightColumnName the column to join on from rightSource
      */
     public JoinOperator(QueryOperator leftSource,
-                 QueryOperator rightSource,
-                 String leftColumnName,
-                 String rightColumnName,
-                 TransactionContext transaction,
-                 JoinType joinType) {
+                        QueryOperator rightSource,
+                        String leftColumnName,
+                        String rightColumnName,
+                        TransactionContext transaction,
+                        JoinType joinType) {
         super(OperatorType.JOIN);
         this.joinType = joinType;
         this.leftSource = leftSource;
@@ -60,7 +61,7 @@ public abstract class JoinOperator extends QueryOperator {
     @Override
     public QueryOperator getSource() {
         throw new RuntimeException("There is no single source for join operators. use " +
-                                     "getRightSource and getLeftSource and the corresponding set methods.");
+            "getRightSource and getLeftSource and the corresponding set methods.");
     }
 
     @Override
@@ -80,8 +81,8 @@ public abstract class JoinOperator extends QueryOperator {
     @Override
     public String str() {
         return String.format("%s on %s=%s (cost=%d)",
-                this.joinType, this.leftColumnName, this.rightColumnName,
-                this.estimateIOCost());
+            this.joinType, this.leftColumnName, this.rightColumnName,
+            this.estimateIOCost());
     }
 
     @Override
@@ -106,8 +107,8 @@ public abstract class JoinOperator extends QueryOperator {
         TableStats leftStats = this.leftSource.estimateStats();
         TableStats rightStats = this.rightSource.estimateStats();
         return leftStats.copyWithJoin(this.leftColumnIndex,
-                rightStats,
-                this.rightColumnIndex);
+            rightStats,
+            this.rightColumnIndex);
     }
 
     /**
