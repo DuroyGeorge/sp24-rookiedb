@@ -22,8 +22,25 @@ public enum LockType {
             throw new NullPointerException("null lock type");
         }
         // TODO(proj4_part1): implement
-
-        return false;
+        if (b == LockType.NL) {
+            return true;
+        }
+        switch (a) {
+            case S:
+                return b == S || b == IS;
+            case X:
+                return false;
+            case IS:
+                return b == IS || b == IX || b == S || b == SIX;
+            case IX:
+                return b == IX || b == IS || b == SIX;
+            case SIX:
+                return b == IS;
+            case NL:
+                return true;
+            default:
+                throw new UnsupportedOperationException("bad lock type");
+        }
     }
 
     /**
@@ -35,13 +52,20 @@ public enum LockType {
             throw new NullPointerException("null lock type");
         }
         switch (a) {
-        case S: return IS;
-        case X: return IX;
-        case IS: return IS;
-        case IX: return IX;
-        case SIX: return IX;
-        case NL: return NL;
-        default: throw new UnsupportedOperationException("bad lock type");
+            case S:
+                return IS;
+            case X:
+                return IX;
+            case IS:
+                return IS;
+            case IX:
+                return IX;
+            case SIX:
+                return IX;
+            case NL:
+                return NL;
+            default:
+                throw new UnsupportedOperationException("bad lock type");
         }
     }
 
@@ -54,8 +78,7 @@ public enum LockType {
             throw new NullPointerException("null lock type");
         }
         // TODO(proj4_part1): implement
-
-        return false;
+        return parentLockType == parentLock(childLockType) || substitutable(parentLockType, parentLock(childLockType));
     }
 
     /**
@@ -69,8 +92,22 @@ public enum LockType {
             throw new NullPointerException("null lock type");
         }
         // TODO(proj4_part1): implement
-
-        return false;
+        switch (required) {
+            case S:
+                return substitute == S || substitute == X || substitute == SIX;
+            case X:
+                return substitute == X;
+            case IS:
+                return substitute == S || substitute == IS || substitute == IX || substitute == SIX;
+            case IX:
+                return substitute == IX || substitute == X || substitute == SIX;
+            case SIX:
+                return substitute == SIX;
+            case NL:
+                return true;
+            default:
+                throw new UnsupportedOperationException("bad lock type");
+        }
     }
 
     /**
@@ -83,13 +120,20 @@ public enum LockType {
     @Override
     public String toString() {
         switch (this) {
-        case S: return "S";
-        case X: return "X";
-        case IS: return "IS";
-        case IX: return "IX";
-        case SIX: return "SIX";
-        case NL: return "NL";
-        default: throw new UnsupportedOperationException("bad lock type");
+            case S:
+                return "S";
+            case X:
+                return "X";
+            case IS:
+                return "IS";
+            case IX:
+                return "IX";
+            case SIX:
+                return "SIX";
+            case NL:
+                return "NL";
+            default:
+                throw new UnsupportedOperationException("bad lock type");
         }
     }
 }
