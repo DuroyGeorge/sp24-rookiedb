@@ -2,10 +2,7 @@ package edu.berkeley.cs186.database.concurrency;
 
 import edu.berkeley.cs186.database.TransactionContext;
 
-import java.util.ArrayList;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
@@ -106,7 +103,7 @@ public class LockContext {
         }
         LockContext currentContext = this;
         while (currentContext != null && currentContext.getEffectiveLockType(transaction) == LockType.NL) {
-            currentContext = parentContext();
+            currentContext = currentContext.parentContext();
         }
         if (currentContext == null) {
             lockman.acquire(transaction, name, lockType);
@@ -189,10 +186,11 @@ public class LockContext {
             throw new InvalidLockException("Invalid lock request");
         }
         if (LockType.substitutable(newLockType, getEffectiveLockType(transaction)) && newLockType != getEffectiveLockType(transaction)) {
-            if (newLockType == LockType.SIX ) {
-                lockman.acquireAndRelease(transaction, getResourceName(), newLockType, sisDescendants(transaction));
-            }
-            else{
+            if (newLockType == LockType.SIX) {
+                List<ResourceName> toRelease = sisDescendants(transaction);
+                toRelease.add(getResourceName());
+                lockman.acquireAndRelease(transaction, getResourceName(), newLockType, toRelease);
+            } else {
                 lockman.promote(transaction, getResourceName(), newLockType);
             }
         } else {
@@ -243,8 +241,10 @@ public class LockContext {
         }
         switch (getEffectiveLockType(transaction)) {
             case IS:
-                List<ResourceName> helper=sisDescendants(transaction);
-                lockman.acquireAndRelease(transaction,getResourceName(),LockType.S,sisDescendants(transaction));
+                List<ResourceName> helper = sisDescendants(transaction);
+                List<ResourceName> temp = sisDescendants(transaction);
+                temp.add(getResourceName());
+                lockman.acquireAndRelease(transaction, getResourceName(), LockType.S, temp);
                 for (ResourceName sisResource : helper) {
                     LockContext toRelease = fromResourceName(lockman, sisResource);
                     if (toRelease.parentContext() != null) {
@@ -257,8 +257,10 @@ public class LockContext {
             case SIX:
                 for (Lock lock : lockman.getLocks(transaction)) {
                     if (lock.name.isDescendantOf(getResourceName()) && lock.lockType == LockType.X) {
-                        helper=sisDescendants(transaction);
-                        lockman.acquireAndRelease(transaction,getResourceName(),LockType.X,sisDescendants(transaction));
+                        helper = sisDescendants(transaction);
+                        temp = sisDescendants(transaction);
+                        temp.add(getResourceName());
+                        lockman.acquireAndRelease(transaction, getResourceName(), LockType.X, temp);
                         for (ResourceName sisResource : helper) {
                             LockContext toRelease = fromResourceName(lockman, sisResource);
                             if (toRelease.parentContext() != null) {
@@ -269,8 +271,10 @@ public class LockContext {
                         return;
                     }
                 }
-                helper=sisDescendants(transaction);
-                lockman.acquireAndRelease(transaction,getResourceName(),LockType.X,sisDescendants(transaction));
+                helper = sisDescendants(transaction);
+                temp = sisDescendants(transaction);
+                temp.add(getResourceName());
+                lockman.acquireAndRelease(transaction, getResourceName(), LockType.X, temp);
                 for (ResourceName sisResource : helper) {
                     LockContext toRelease = fromResourceName(lockman, sisResource);
                     if (toRelease.parentContext() != null) {
