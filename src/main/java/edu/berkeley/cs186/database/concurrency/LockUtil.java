@@ -2,8 +2,6 @@ package edu.berkeley.cs186.database.concurrency;
 
 import edu.berkeley.cs186.database.TransactionContext;
 
-import java.util.Collections;
-import java.util.Objects;
 
 /**
  * LockUtil is a declarative layer which simplifies multigranularity lock
@@ -75,11 +73,9 @@ public class LockUtil {
                     break;
                 case IS:
                     isGoodForS(parentContext, transaction);
-//                    lockContext.lockman.acquireAndRelease(transaction, lockContext.name, LockType.S, Collections.singletonList(lockContext.name));
                     lockContext.escalate(transaction);
                     break;
                 case IX:
-//                    lockContext.lockman.acquireAndRelease(transaction, lockContext.name, LockType.SIX, Collections.singletonList(lockContext.name));
                     lockContext.promote(transaction,LockType.SIX);
                     break;
                 case NL:
@@ -112,10 +108,6 @@ public class LockUtil {
                 isGoodForX(parentContext.parentContext(), transaction);
                 parentContext.promote(transaction, LockType.IX);
                 break;
-            case X:
-            case IX:
-            case SIX:
-                return;
             case S:
                 isGoodForX(parentContext.parentContext(), transaction);
                 parentContext.promote(transaction, LockType.SIX);
