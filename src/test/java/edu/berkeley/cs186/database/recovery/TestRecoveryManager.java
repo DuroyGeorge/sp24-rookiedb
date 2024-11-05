@@ -70,7 +70,7 @@ public class TestRecoveryManager {
         ARIESRecoveryManager recoveryManager = new ARIESRecoveryManager(DummyTransaction::create);
         DiskSpaceManager diskSpaceManager = new DiskSpaceManagerImpl(dir, recoveryManager);
         BufferManager bufferManager = new BufferManager(diskSpaceManager, recoveryManager, 32,
-                new LRUEvictionPolicy());
+            new LRUEvictionPolicy());
         boolean isLoaded = true;
         try {
             diskSpaceManager.allocPart(0);
@@ -97,8 +97,8 @@ public class TestRecoveryManager {
     /**
      * Tests transaction abort. Transactions T1 and T2 are created, T2 aborts:
      * Checks:
-     *  - Transaction table's lastLSN for T1 is the abort record LSN
-     *  - T1 and T2's transaction statuses are correct
+     * - Transaction table's lastLSN for T1 is the abort record LSN
+     * - T1 and T2's transaction statuses are correct
      */
     @Test
     @Category(PublicTests.class)
@@ -125,21 +125,21 @@ public class TestRecoveryManager {
     /**
      * Tests that aborting + ending a transaction correctly undoes its changes:
      * 1. Sets up and executes a log w/ 5 log records (see code for record types),
-     *    the transaction table. T2 completes aborting. T1 aborts but does not end
+     * the transaction table. T2 completes aborting. T1 aborts but does not end
      * 2. After aborting, RecoveryManager.end() is called on T1
-     *    Checks:
-     *      - AllocPartLogRecord and UpdatePageLogRecord are undone
-     *      - Nothing else is undone
+     * Checks:
+     * - AllocPartLogRecord and UpdatePageLogRecord are undone
+     * - Nothing else is undone
      * 3. Checks state after aborting:
-     *      - Log contains correct CLR records and EndTransaction record
-     *      - DPT contains 10000000001L modified from undoing the page update
-     *      - Transaction table (empty) and transaction status have correct values.
+     * - Log contains correct CLR records and EndTransaction record
+     * - DPT contains 10000000001L modified from undoing the page update
+     * - Transaction table (empty) and transaction status have correct values.
      */
     @Test
     @Category(PublicTests.class)
     public void testAbortingEnd() {
-        byte[] before = new byte[] { (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00, };
-        byte[] after = new byte[] { (byte) 0xBA, (byte) 0xAD, (byte) 0xF0, (byte) 0x00, (byte) 0x00, (byte) 0x0D };
+        byte[] before = new byte[]{(byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00,};
+        byte[] after = new byte[]{(byte) 0xBA, (byte) 0xAD, (byte) 0xF0, (byte) 0x00, (byte) 0x00, (byte) 0x0D};
 
         Transaction t1 = DummyTransaction.create(1L);
         Transaction t2 = DummyTransaction.create(2L);
@@ -225,12 +225,12 @@ public class TestRecoveryManager {
     /**
      * Basic test of a transaction updating and committing:
      * 1. Transaction 1 logs a page update and commits
-     *    Checks:
-     *      - LastLSN in transaction table is equal to the LSN of the commit record
-     *      - Transaction 1 status is committing
+     * Checks:
+     * - LastLSN in transaction table is equal to the LSN of the commit record
+     * - Transaction 1 status is committing
      * 2. Transaction 2 starts and logs a page update. Does not commit
-     *    Checks:
-     *      - LSN of T1 commit <= flushed LSN < LSN of T2 page write (log is flushed up to the commit record)
+     * Checks:
+     * - LSN of T1 commit <= flushed LSN < LSN of T2 page write (log is flushed up to the commit record)
      */
     @Test
     @Category(PublicTests.class)
@@ -238,8 +238,8 @@ public class TestRecoveryManager {
         // Details for page update
         long pageNum = 10000000002L;
         short pageOffset = 20;
-        byte[] before = new byte[] { (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00 };
-        byte[] after = new byte[] { (byte) 0xBA, (byte) 0xAD, (byte) 0xF0, (byte) 0x0D };
+        byte[] before = new byte[]{(byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00};
+        byte[] after = new byte[]{(byte) 0xBA, (byte) 0xAD, (byte) 0xF0, (byte) 0x0D};
 
         // Create Transaction 1
         Transaction transaction1 = DummyTransaction.create(1L);
@@ -256,7 +256,7 @@ public class TestRecoveryManager {
         // Since Transaction1 committed, the log should be flushed up to the
         // commit record's LSN
         assertTrue(logManager.getFlushedLSN() + " is not greater than or equal to " + commitLSN,
-                logManager.getFlushedLSN() >= commitLSN);
+            logManager.getFlushedLSN() >= commitLSN);
 
         // Create Transaction 2
         Transaction transaction2 = DummyTransaction.create(2L);
@@ -268,35 +268,35 @@ public class TestRecoveryManager {
         // You must implement logPageWrite to pass this check. Checks that log
         // isn't automatically flushed for page updates.
         assertTrue(logManager.getFlushedLSN() + " is not less than " + updateLSN,
-                logManager.getFlushedLSN() < updateLSN);
+            logManager.getFlushedLSN() < updateLSN);
     }
 
     /**
      * Tests functionality of end:
      * 1. T1 and T2 log a combination of writes and allocs. T2 commits.
-     *    Checks:
-     *      - LastLSNs in transaction table are updated correctly
-     *      - Should be flushed up to the commit record
-     *      - T2's status is committing
+     * Checks:
+     * - LastLSNs in transaction table are updated correctly
+     * - Should be flushed up to the commit record
+     * - T2's status is committing
      * 2. T2 ends and T1 aborts
-     *    Checks:
-     *      - T1's status is aborting
-     *      - T1's lastLSN in the transaction table is updated with the abort record LSN
+     * Checks:
+     * - T1's status is aborting
+     * - T1's lastLSN in the transaction table is updated with the abort record LSN
      * 3. T1 ends and should cause a rollback.
-     *    Checks:
-     *      - Appropriate number of each record type on the log (including the CLR records from the rollback)
-     *          - See code below for the breakdown
-     *      - DPT stays the same
-     *      - FlushedLSN is still at the commit record
-     *      - Transaction statuses are COMPLETE and transaction table is empty
+     * Checks:
+     * - Appropriate number of each record type on the log (including the CLR records from the rollback)
+     * - See code below for the breakdown
+     * - DPT stays the same
+     * - FlushedLSN is still at the commit record
+     * - Transaction statuses are COMPLETE and transaction table is empty
      */
     @Test
     @Category(PublicTests.class)
     public void testEnd() {
         long pageNum = 10000000002L;
         short pageOffset = 20;
-        byte[] before = new byte[] { (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00 };
-        byte[] after = new byte[] { (byte) 0xBA, (byte) 0xAD, (byte) 0xF0, (byte) 0x0D };
+        byte[] before = new byte[]{(byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00};
+        byte[] after = new byte[]{(byte) 0xBA, (byte) 0xAD, (byte) 0xF0, (byte) 0x0D};
 
         // 1. T1 and T2 log a combination of writes and allocs. T2 commits.
         Transaction transaction1 = DummyTransaction.create(1L);
@@ -305,16 +305,16 @@ public class TestRecoveryManager {
         recoveryManager.startTransaction(transaction2);
 
         // Mix of writes and allocs from both T1 and T2. T2 commits.
-        long[] LSNs = new long[] {
-                recoveryManager.logPageWrite(1L, pageNum, pageOffset, before, after), // 0
-                recoveryManager.logPageWrite(2L, pageNum + 1, pageOffset, before, after), // 1
-                recoveryManager.logPageWrite(1L, pageNum, pageOffset, after, before), // 2
-                recoveryManager.logPageWrite(2L, pageNum + 1, pageOffset, after, before), // 3
-                recoveryManager.logAllocPart(2L, 2), // 4
-                recoveryManager.logPageWrite(1L, pageNum, pageOffset, before, after), // 5
-                recoveryManager.commit(2L), // 6
-                recoveryManager.logPageWrite(1L, pageNum, pageOffset, before, after), // 7
-                -1L, -1L,
+        long[] LSNs = new long[]{
+            recoveryManager.logPageWrite(1L, pageNum, pageOffset, before, after), // 0
+            recoveryManager.logPageWrite(2L, pageNum + 1, pageOffset, before, after), // 1
+            recoveryManager.logPageWrite(1L, pageNum, pageOffset, after, before), // 2
+            recoveryManager.logPageWrite(2L, pageNum + 1, pageOffset, after, before), // 3
+            recoveryManager.logAllocPart(2L, 2), // 4
+            recoveryManager.logPageWrite(1L, pageNum, pageOffset, before, after), // 5
+            recoveryManager.commit(2L), // 6
+            recoveryManager.logPageWrite(1L, pageNum, pageOffset, before, after), // 7
+            -1L, -1L,
         };
 
         // lastLSNs should be set to LSN of transaction's last appended record
@@ -346,13 +346,26 @@ public class TestRecoveryManager {
             LogRecord record = logs.next();
             totalRecords++;
             switch (record.getType()) {
-                case ABORT_TRANSACTION: abort++; break;
-                case COMMIT_TRANSACTION: commit++; break;
-                case END_TRANSACTION: end++;  break;
-                case UPDATE_PAGE: update++; break;
-                case UNDO_UPDATE_PAGE: undo++; break;
-                case ALLOC_PART: allocPart++; break;
-                default: break;
+                case ABORT_TRANSACTION:
+                    abort++;
+                    break;
+                case COMMIT_TRANSACTION:
+                    commit++;
+                    break;
+                case END_TRANSACTION:
+                    end++;
+                    break;
+                case UPDATE_PAGE:
+                    update++;
+                    break;
+                case UNDO_UPDATE_PAGE:
+                    undo++;
+                    break;
+                case ALLOC_PART:
+                    allocPart++;
+                    break;
+                default:
+                    break;
             }
         }
         // 3 (master + begin/end checkpoint) + 10 (LSNs) + 4 (CLRs) + 1 (END)
@@ -379,21 +392,21 @@ public class TestRecoveryManager {
 
     /**
      * Tests logging a page update.
-     *
+     * <p>
      * Does the following:
      * 1. Transaction 1 logs a page update on 10000000002L
      * 2. Transaction 2 logs a page update on 10000000003L
      * 3. Transaction 1 logs another page write on 10000000002L again
      * Checks:
-     *  - Transaction table contains each transaction with the correct lastLSN value
-     *  - Dirty page table contains page modified by this update with correct recLSN
+     * - Transaction table contains each transaction with the correct lastLSN value
+     * - Dirty page table contains page modified by this update with correct recLSN
      */
     @Test
     @Category(PublicTests.class)
     public void testSimpleLogPageWrite() {
         short pageOffset = 20;
-        byte[] before = new byte[] { (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00 };
-        byte[] after = new byte[] { (byte) 0xBA, (byte) 0xAD, (byte) 0xF0, (byte) 0x0D };
+        byte[] before = new byte[]{(byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00};
+        byte[] after = new byte[]{(byte) 0xBA, (byte) 0xAD, (byte) 0xF0, (byte) 0x0D};
 
         Transaction transaction1 = DummyTransaction.create(1L);
         recoveryManager.startTransaction(transaction1);
@@ -423,15 +436,15 @@ public class TestRecoveryManager {
     /**
      * Tests rolling back to a savepoint:
      * 1. T1 sets a savepoint, logs a page write, then rolls back to the savepoint
-     *    Checks:
-     *      - Log contains two records: the page update record, and the CLR record for that update
-     *      - CLR record contains the correct values (offset, after, transaction number, page number, undoNextLSN)
+     * Checks:
+     * - Log contains two records: the page update record, and the CLR record for that update
+     * - CLR record contains the correct values (offset, after, transaction number, page number, undoNextLSN)
      */
     @Test
     @Category(PublicTests.class)
     public void testSimpleSavepoint() {
-        byte[] before = new byte[] { (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00 };
-        byte[] after = new byte[] { (byte) 0xBA, (byte) 0xAD, (byte) 0xF0, (byte) 0x0D };
+        byte[] before = new byte[]{(byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00};
+        byte[] after = new byte[]{(byte) 0xBA, (byte) 0xAD, (byte) 0xF0, (byte) 0x0D};
 
         Transaction transaction1 = DummyTransaction.create(1L);
         recoveryManager.startTransaction(transaction1);
@@ -455,16 +468,16 @@ public class TestRecoveryManager {
 
     /**
      * Tests basic checkpoint:
-     *  - T1 logs a write, checkpoints, logs 2 additional writes
-     *    Checks:
-     *      - Logs one begin checkpoint record and one end checkpoint record
-     *      - Check that the dpt and transaction table in the checkpoint record contain the correct contents
+     * - T1 logs a write, checkpoints, logs 2 additional writes
+     * Checks:
+     * - Logs one begin checkpoint record and one end checkpoint record
+     * - Check that the dpt and transaction table in the checkpoint record contain the correct contents
      */
     @Test
     @Category(PublicTests.class)
     public void testSimpleCheckpoint() {
-        byte[] before = new byte[] { (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00 };
-        byte[] after = new byte[] { (byte) 0xBA, (byte) 0xAD, (byte) 0xF0, (byte) 0x0D };
+        byte[] before = new byte[]{(byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00};
+        byte[] after = new byte[]{(byte) 0xBA, (byte) 0xAD, (byte) 0xF0, (byte) 0x0D};
 
         Transaction transaction1 = DummyTransaction.create(1L);
         recoveryManager.startTransaction(transaction1);
@@ -494,28 +507,28 @@ public class TestRecoveryManager {
 
     /**
      * Tests that end checkpoints are appended when as full as possible:
-     *  - DPT is filled with 200 entries, and the transaction table is filled
-     *    with 200 entries. Afterwards, a checkpoint is created.
-     *    Checks:
-     *      - First end checkpoint contains all of the DPT entries and as many
-     *        possible transaction table entries that can fit in the remaining
-     *        space (in this case, 52)
-     *      - Second end checkpoint contains the remaining transaction table
-     *        entries (in this case, 200 - 52 = 148)
+     * - DPT is filled with 200 entries, and the transaction table is filled
+     * with 200 entries. Afterwards, a checkpoint is created.
+     * Checks:
+     * - First end checkpoint contains all of the DPT entries and as many
+     * possible transaction table entries that can fit in the remaining
+     * space (in this case, 52)
+     * - Second end checkpoint contains the remaining transaction table
+     * entries (in this case, 200 - 52 = 148)
      */
     @Test
     @Category(PublicTests.class)
     public void testFullCheckpoint() {
         // Create 200 DPT entries and 200 transaction table entries
         for (long l = 1; l <= 200; l++) {
-            dirtyPageTable.put(l, l*l);
+            dirtyPageTable.put(l, l * l);
 
             Transaction t = DummyTransaction.create(l);
             recoveryManager.startTransaction(t);
             // Sets status to one of RUNNING, COMMITTING or ABORTING
             t.setStatus(Transaction.Status.fromInt((int) l % 3));
             TransactionTableEntry entry = new TransactionTableEntry(t);
-            entry.lastLSN = l*l;
+            entry.lastLSN = l * l;
             transactionTable.put(l, entry);
         }
 
@@ -551,7 +564,7 @@ public class TestRecoveryManager {
         // Check the contents of the checkpoint DPT/transaction tables match
         // what we inserted earlier
         for (long l = 1; l <= 200; l++) {
-            assertEquals(l*l, (long) endCheckpoint1.getDirtyPageTable().get(l));
+            assertEquals(l * l, (long) endCheckpoint1.getDirtyPageTable().get(l));
             Pair<Transaction.Status, Long> p;
             if (endCheckpoint1.getTransactionTable().containsKey(l)) {
                 p = endCheckpoint1.getTransactionTable().get(l);
@@ -564,7 +577,7 @@ public class TestRecoveryManager {
             // Status
             assertEquals(p.getFirst(), Transaction.Status.fromInt((int) l % 3));
             // prevLSN
-            assertEquals(l*l, (long) p.getSecond());
+            assertEquals(l * l, (long) p.getSecond());
         }
     }
 
@@ -572,16 +585,16 @@ public class TestRecoveryManager {
      * Test rolling back T2 while T1 is also running:
      * 1. T1 writes, T2 writes, T2 makes savepoint, T1 and T2 continue writing
      * 2. T2 rolls back to savepoint
-     *    Checks:
-     *      - Nothing undone (all records for T2 after the savepoint have already been undone)
-     *      - Checks that DPT and transaction table remain intact
-     *      - T1 still running
+     * Checks:
+     * - Nothing undone (all records for T2 after the savepoint have already been undone)
+     * - Checks that DPT and transaction table remain intact
+     * - T1 still running
      */
     @Test
     @Category(PublicTests.class)
     public void testNestedRollback() {
-        byte[] before = new byte[] { (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00, };
-        byte[] after = new byte[] { (byte) 0xBA, (byte) 0xAD, (byte) 0xF0, (byte) 0x00, (byte) 0x00, (byte) 0x0D };
+        byte[] before = new byte[]{(byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00,};
+        byte[] after = new byte[]{(byte) 0xBA, (byte) 0xAD, (byte) 0xF0, (byte) 0x00, (byte) 0x00, (byte) 0x0D};
 
         Transaction t1 = DummyTransaction.create(1L);
         Transaction t2 = DummyTransaction.create(2L);
@@ -592,13 +605,13 @@ public class TestRecoveryManager {
 
         logManager.flushToLSN(9999L); // force next record to be LSN 10000L
         LogRecord updateRecord1 = new UpdatePageLogRecord(t1.getTransNum(), 10000000001L, 0L, (short) 71,
-                before, after);
+            before, after);
         logManager.appendToLog(updateRecord1);
         updateRecord1.redo(recoveryManager, diskSpaceManager, bufferManager);
 
         logManager.flushToLSN(19999L); // force next record to be LSN 20000L
         LogRecord updateRecord2 = new UpdatePageLogRecord(t2.getTransNum(), 10000000001L, 0L, (short) 33,
-                before, after);
+            before, after);
         logManager.appendToLog(updateRecord2);
         updateRecord2.redo(recoveryManager, diskSpaceManager, bufferManager);
 
@@ -607,22 +620,22 @@ public class TestRecoveryManager {
 
         logManager.flushToLSN(29999L); // force next record to be LSN 30000L
         LogRecord updateRecord3 = new UpdatePageLogRecord(t2.getTransNum(), 10000000001L, 20000L,
-                (short) 11,
-                before, after);
+            (short) 11,
+            before, after);
         logManager.appendToLog(updateRecord3);
         updateRecord3.redo(recoveryManager, diskSpaceManager, bufferManager);
 
         logManager.flushToLSN(39999L); // force next record to be LSN 40000L
         LogRecord updateRecord4 = new UpdatePageLogRecord(t1.getTransNum(), 10000000002L, 10000L,
-                (short) 991,
-                before, after);
+            (short) 991,
+            before, after);
         logManager.appendToLog(updateRecord4);
         updateRecord4.redo(recoveryManager, diskSpaceManager, bufferManager);
 
         logManager.flushToLSN(49999L); // force next record to be LSN 50000L
         LogRecord updateRecord5 = new UndoUpdatePageLogRecord(t2.getTransNum(), 10000000001L, 30000L,
-                20000L,
-                (short) 11, before);
+            20000L,
+            (short) 11, before);
         logManager.appendToLog(updateRecord5);
         updateRecord5.redo(recoveryManager, diskSpaceManager, bufferManager);
 
@@ -660,7 +673,7 @@ public class TestRecoveryManager {
 
     /**
      * Test analysis phase of recovery
-     *
+     * <p>
      * Does the following:
      * 1. Sets up log (see comments below for table)
      * 2. Simulates database shutdown
@@ -671,8 +684,8 @@ public class TestRecoveryManager {
     @Test
     @Category(PublicTests.class)
     public void testRestartAnalysis() {
-        byte[] before = new byte[] { (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00 };
-        byte[] after = new byte[] { (byte) 0xBA, (byte) 0xAD, (byte) 0xF0, (byte) 0x0D };
+        byte[] before = new byte[]{(byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00};
+        byte[] after = new byte[]{(byte) 0xBA, (byte) 0xAD, (byte) 0xF0, (byte) 0x0D};
 
         DummyTransaction transaction1 = DummyTransaction.create(1L);
         DummyTransaction transaction2 = DummyTransaction.create(2L);
@@ -694,7 +707,7 @@ public class TestRecoveryManager {
         List<Long> LSNs = new ArrayList<>();
         LSNs.add(logManager.appendToLog(new UpdatePageLogRecord(1L, 10000000001L, 0L, (short) 0, before, after))); // 0
         LSNs.add(logManager
-                .appendToLog(new UpdatePageLogRecord(1L, 10000000002L, LSNs.get(0), (short) 0, before, after))); // 1
+            .appendToLog(new UpdatePageLogRecord(1L, 10000000002L, LSNs.get(0), (short) 0, before, after))); // 1
         LSNs.add(logManager.appendToLog(new UpdatePageLogRecord(3L, 10000000003L, 0L, (short) 0, before, after))); // 2
         LSNs.add(logManager.appendToLog(new CommitTransactionLogRecord(1L, LSNs.get(1)))); // 3
         LSNs.add(logManager.appendToLog(new EndTransactionLogRecord(1L, LSNs.get(3)))); // 4
@@ -757,26 +770,26 @@ public class TestRecoveryManager {
      * Tests that transaction table and DPT are updated when encountering
      * checkpoints with new information:
      * 1. The log is set up as follows:
-     *     - 2 UpdatePage records for T1. These are before the begin checkpoint,
-     *       so they shouldn't be seen during analysis
-     *     - 4 UpdatePage records for T2
-     *     - EndTransaction for T1
-     *     - CommitTransaction For T2
-     *     - AbortTransaction for T3
-     *     - EndCheckpoint
+     * - 2 UpdatePage records for T1. These are before the begin checkpoint,
+     * so they shouldn't be seen during analysis
+     * - 4 UpdatePage records for T2
+     * - EndTransaction for T1
+     * - CommitTransaction For T2
+     * - AbortTransaction for T3
+     * - EndCheckpoint
      * 2. The master record is rewritten and analysis phase is run. Afterwards:
-     *     - Analysis should have appended an EndTransaction record for T2,
-     *       which was in the committing state
-     *     - Analysis should have appended an AbortTransaction record for T4.
-     *       T4 should have been found and in the running state while processing
-     *       the end checkpoint record.
+     * - Analysis should have appended an EndTransaction record for T2,
+     * which was in the committing state
+     * - Analysis should have appended an AbortTransaction record for T4.
+     * T4 should have been found and in the running state while processing
+     * the end checkpoint record.
      * 3. DPT and transaction table are checked.
      */
     @Test
     @Category(PublicTests.class)
     public void testAnalysisCheckpoint() {
-        byte[] before = new byte[] { (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00 };
-        byte[] after = new byte[] { (byte) 0xBA, (byte) 0xAD, (byte) 0xF0, (byte) 0x0D };
+        byte[] before = new byte[]{(byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00};
+        byte[] after = new byte[]{(byte) 0xBA, (byte) 0xAD, (byte) 0xF0, (byte) 0x0D};
 
         List<Long> LSNs = new ArrayList<>();
         LSNs.add(logManager.appendToLog(new UpdatePageLogRecord(1L, 10000000001L, 0L, (short) 0, before, after))); // 0
@@ -835,7 +848,7 @@ public class TestRecoveryManager {
         assertTrue(transactionTable.containsKey(3l));
         assertEquals((long) LSNs.get(9), transactionTable.get(3l).lastLSN);
         assertTrue(transactionTable.containsKey(4l));
-        assertEquals((long) abortRecord.LSN , transactionTable.get(4l).lastLSN);
+        assertEquals((long) abortRecord.LSN, transactionTable.get(4l).lastLSN);
 
         // Check DPT. Should have same entries as in the checkpoint
         assertEquals(LSNs.get(0), dirtyPageTable.get(10000000001L));
@@ -916,18 +929,18 @@ public class TestRecoveryManager {
 
     /**
      * Test redo phase of recovery
-     *
+     * <p>
      * Does the following:
      * 1. Sets up log. Transaction 1 makes a few alloc/updates, commits, and ends.
      * 2. Simulate database shutdown and sets up dpt (to simulate analysis)
      * 3. Runs redo phase and checks that we only redo records 2 - 4 and no
-     *    others (since 0 - 1 were already flushed to disk according to dpt)
+     * others (since 0 - 1 were already flushed to disk according to dpt)
      */
     @Test
     @Category(PublicTests.class)
     public void testRestartRedo() {
-        byte[] before = new byte[] { (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00 };
-        byte[] after = new byte[] { (byte) 0xBA, (byte) 0xAD, (byte) 0xF0, (byte) 0x0D };
+        byte[] before = new byte[]{(byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00};
+        byte[] after = new byte[]{(byte) 0xBA, (byte) 0xAD, (byte) 0xF0, (byte) 0x0D};
         DiskSpaceManager dsm = diskSpaceManager;
         BufferManager bm = bufferManager;
         DummyTransaction.create(1L);
@@ -936,11 +949,11 @@ public class TestRecoveryManager {
         List<Long> LSNs = new ArrayList<>();
         LSNs.add(logManager.appendToLog(new UpdatePageLogRecord(1L, 10000000001L, 0L, (short) 0, before, after))); // 0
         LSNs.add(logManager
-                .appendToLog(new UpdatePageLogRecord(1L, 10000000002L, LSNs.get(0), (short) 1, before, after))); // 1
+            .appendToLog(new UpdatePageLogRecord(1L, 10000000002L, LSNs.get(0), (short) 1, before, after))); // 1
         LSNs.add(logManager
-                .appendToLog(new UpdatePageLogRecord(1L, 10000000002L, LSNs.get(1), (short) 1, after, before))); // 2
+            .appendToLog(new UpdatePageLogRecord(1L, 10000000002L, LSNs.get(1), (short) 1, after, before))); // 2
         LSNs.add(logManager
-                .appendToLog(new UpdatePageLogRecord(1L, 10000000003L, LSNs.get(2), (short) 2, before, after))); // 3
+            .appendToLog(new UpdatePageLogRecord(1L, 10000000003L, LSNs.get(2), (short) 2, before, after))); // 3
         LSNs.add(logManager.appendToLog(new AllocPartLogRecord(1L, 10, LSNs.get(3)))); // 4
         LSNs.add(logManager.appendToLog(new CommitTransactionLogRecord(1L, LSNs.get(4)))); // 5
         LSNs.add(logManager.appendToLog(new EndTransactionLogRecord(1L, LSNs.get(5)))); // 6
@@ -980,37 +993,37 @@ public class TestRecoveryManager {
      * Test undo phase of recovery:
      * 1. Sets up log - T1 makes 4 updates and then aborts.
      * 2. We execute the changes specified in log records, simulate a db
-     *    shutdown, and set up transaction table to simulate analysis phase
+     * shutdown, and set up transaction table to simulate analysis phase
      * 3. Runs the undo phase
-     *    Checks:
-     *      - The 4 update records are undone and appended to log
-     *      - Transaction table is updated accordingly as we undo
-     *      - No other records are undone
-     *      - T1 status set to COMPLETE
+     * Checks:
+     * - The 4 update records are undone and appended to log
+     * - Transaction table is updated accordingly as we undo
+     * - No other records are undone
+     * - T1 status set to COMPLETE
      */
     @Test
     @Category(PublicTests.class)
     public void testRestartUndo() {
-        byte[] before = new byte[] { (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00 };
-        byte[] after = new byte[] { (byte) 0xBA, (byte) 0xAD, (byte) 0xF0, (byte) 0x0D };
+        byte[] before = new byte[]{(byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00};
+        byte[] after = new byte[]{(byte) 0xBA, (byte) 0xAD, (byte) 0xF0, (byte) 0x0D};
         DummyTransaction transaction1 = DummyTransaction.create(1L);
 
         // 1. Set up log - T1 makes 4 updates and then aborts.
         List<Long> LSNs = new ArrayList<>();
         LSNs.add(logManager.appendToLog(new UpdatePageLogRecord(1L, 10000000001L, 0L, (short) 0, before, after))); // 0
         LSNs.add(logManager
-                .appendToLog(new UpdatePageLogRecord(1L, 10000000002L, LSNs.get(0), (short) 1, before, after))); // 1
+            .appendToLog(new UpdatePageLogRecord(1L, 10000000002L, LSNs.get(0), (short) 1, before, after))); // 1
         LSNs.add(logManager
-                .appendToLog(new UpdatePageLogRecord(1L, 10000000003L, LSNs.get(1), (short) 2, before, after))); // 2
+            .appendToLog(new UpdatePageLogRecord(1L, 10000000003L, LSNs.get(1), (short) 2, before, after))); // 2
         LSNs.add(logManager
-                .appendToLog(new UpdatePageLogRecord(1L, 10000000004L, LSNs.get(2), (short) 3, before, after))); // 3
+            .appendToLog(new UpdatePageLogRecord(1L, 10000000004L, LSNs.get(2), (short) 3, before, after))); // 3
         LSNs.add(logManager.appendToLog(new AbortTransactionLogRecord(1L, LSNs.get(3)))); // 4
 
         // 2. Execute logs, simulate shutdown, set up transaction table
         // actually do the writes
         for (int i = 0; i < 4; ++i) {
             logManager.fetchLogRecord(LSNs.get(i)).redo(
-                    recoveryManager, diskSpaceManager, bufferManager);
+                recoveryManager, diskSpaceManager, bufferManager);
         }
 
         // flush everything - recovery tests should always start
@@ -1054,7 +1067,6 @@ public class TestRecoveryManager {
             assertEquals((long) record.LSN, transactionTable.get(1L).lastLSN);
             assertEquals(Optional.of(10000000001L), record.getPageNum());
         });
-
         recoveryManager.restartUndo();
         finishRedoChecks();
         assertEquals(Transaction.Status.COMPLETE, transaction1.getStatus());
@@ -1062,22 +1074,22 @@ public class TestRecoveryManager {
 
     /**
      * Tests that CLR records are not undone in undo phase of recovery
-     *
+     * <p>
      * This test does the following:
      * 1. Sets up and executes a log with 6 records (see code for record types). T1 aborts and begins undoing changes.
      * 2. Simulates a database shutdown
      * 3. Performs the undo phase
-     *    Checks:
-     *      - Only the first log record should be undone, all other log records were already undone (see setupRedoChecks)
+     * Checks:
+     * - Only the first log record should be undone, all other log records were already undone (see setupRedoChecks)
      * 4. Checks:
-     *      - Transaction status is COMPLETE & transaction table empty
-     *      - Log contains CLR record and an EndTransaction record
+     * - Transaction status is COMPLETE & transaction table empty
+     * - Log contains CLR record and an EndTransaction record
      */
     @Test
     @Category(PublicTests.class)
     public void testUndoCLR() {
-        byte[] before = new byte[] { (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00 };
-        byte[] after = new byte[] { (byte) 0xBA, (byte) 0xAD, (byte) 0xF0, (byte) 0x0D };
+        byte[] before = new byte[]{(byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00};
+        byte[] after = new byte[]{(byte) 0xBA, (byte) 0xAD, (byte) 0xF0, (byte) 0x0D};
 
         DiskSpaceManager dsm = diskSpaceManager;
         BufferManager bm = bufferManager;
@@ -1088,9 +1100,9 @@ public class TestRecoveryManager {
         List<Long> LSNs = new ArrayList<>();
         LSNs.add(logManager.appendToLog(new UpdatePageLogRecord(1L, 10000000001L, 0L, (short) 0, before, after))); // 0
         LSNs.add(logManager
-                .appendToLog(new UpdatePageLogRecord(1L, 10000000002L, LSNs.get(0), (short) 0, before, after))); // 1
+            .appendToLog(new UpdatePageLogRecord(1L, 10000000002L, LSNs.get(0), (short) 0, before, after))); // 1
         LSNs.add(logManager
-                .appendToLog(new UpdatePageLogRecord(1L, 10000000003L, LSNs.get(1), (short) 0, before, after))); // 2
+            .appendToLog(new UpdatePageLogRecord(1L, 10000000003L, LSNs.get(1), (short) 0, before, after))); // 2
         LSNs.add(logManager.appendToLog(logManager.fetchLogRecord(LSNs.get(2)).undo(LSNs.get(2)))); // 3
         LSNs.add(logManager.appendToLog(new AbortTransactionLogRecord(1L, LSNs.get(3)))); // 4
         LSNs.add(logManager.appendToLog(logManager.fetchLogRecord(LSNs.get(1)).undo(LSNs.get(4)))); // 5
@@ -1153,21 +1165,21 @@ public class TestRecoveryManager {
      * 1. Sets up and executes a log with 4 records (see code for record types)
      * 2. Simulates a database shutdown
      * 3. Performs the undo phase
-     *    Checks:
-     *      - Correct 3 undo records are undone (assert statements in setupRedoChecks)
-     *      - UNDO_ALLOC_PAGE causes a flush
+     * Checks:
+     * - Correct 3 undo records are undone (assert statements in setupRedoChecks)
+     * - UNDO_ALLOC_PAGE causes a flush
      * 4. Checks:
-     *      - Nothing else is undone
-     *      - Transaction table empty and transaction status is COMPLETE
+     * - Nothing else is undone
+     * - Transaction table empty and transaction status is COMPLETE
      * 5. Checks:
-     *      - CLR log records are on the log
-     *      - DPT should contain the pages modified by the UNDOs
+     * - CLR log records are on the log
+     * - DPT should contain the pages modified by the UNDOs
      */
     @Test
     @Category(PublicTests.class)
     public void testUndoDPTAndFlush() {
-        byte[] before = new byte[] { (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00 };
-        byte[] after = new byte[] { (byte) 0xBA, (byte) 0xAD, (byte) 0xF0, (byte) 0x0D };
+        byte[] before = new byte[]{(byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00};
+        byte[] after = new byte[]{(byte) 0xBA, (byte) 0xAD, (byte) 0xF0, (byte) 0x0D};
 
         DiskSpaceManager dsm = diskSpaceManager;
         BufferManager bm = bufferManager;
@@ -1179,7 +1191,7 @@ public class TestRecoveryManager {
         LSNs.add(logManager.appendToLog(new UpdatePageLogRecord(1L, 10000000001L, 0L, (short) 0, before, after))); // 0
         LSNs.add(logManager.appendToLog(new AllocPageLogRecord(1L, 10000000099L, LSNs.get(0)))); // 1
         LSNs.add(logManager
-                .appendToLog(new UpdatePageLogRecord(1L, 10000000002L, LSNs.get(1), (short) 0, before, after))); // 2
+            .appendToLog(new UpdatePageLogRecord(1L, 10000000002L, LSNs.get(1), (short) 0, before, after))); // 2
         LSNs.add(logManager.appendToLog(new AbortTransactionLogRecord(1L, LSNs.get(2)))); // 3
 
         logManager.fetchLogRecord(LSNs.get(0)).redo(recoveryManager, dsm, bm);
@@ -1263,24 +1275,24 @@ public class TestRecoveryManager {
      * Tests simple case of recovery in its entirety (analysis, redo, undo):
      * 1. T1 logs one page write, simulate db shutdown
      * 2. Run analysis + redo
-     *    Checks:
-     *      - Page write is redone
-     *      - T1 status is RECOVERY_ABORTING
-     *      - Transaction table contains T1 and correct lastLSN
-     *      - DPT contains 10000000001L with correct recLSN
+     * Checks:
+     * - Page write is redone
+     * - T1 status is RECOVERY_ABORTING
+     * - Transaction table contains T1 and correct lastLSN
+     * - DPT contains 10000000001L with correct recLSN
      * 3. Runs undo phase
-     *    Checks the entire log from the first page write which contains:
-     *      - The page write log record
-     *      - An abort record issued at the end of analysis
-     *      - CLR record for the page write
-     *      - An end transaction record issued at the end of undo
-     *      - Checkpoint records at the end of recovery
+     * Checks the entire log from the first page write which contains:
+     * - The page write log record
+     * - An abort record issued at the end of analysis
+     * - CLR record for the page write
+     * - An end transaction record issued at the end of undo
+     * - Checkpoint records at the end of recovery
      */
     @Test
     @Category(PublicTests.class)
     public void testSimpleRestart() {
-        byte[] before = new byte[] { (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00 };
-        byte[] after = new byte[] { (byte) 0xBA, (byte) 0xAD, (byte) 0xF0, (byte) 0x0D };
+        byte[] before = new byte[]{(byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00};
+        byte[] after = new byte[]{(byte) 0xBA, (byte) 0xAD, (byte) 0xF0, (byte) 0x0D};
 
         Transaction transaction1 = DummyTransaction.create(1L);
         // 1. T1 logs one page write, simulate db shutdown
@@ -1329,28 +1341,28 @@ public class TestRecoveryManager {
 
     /**
      * Tests restart in its entirety
-     *
+     * <p>
      * Does the following:
      * 1. Sets up a log
-     *      - T1 writes
-     *      - T2 writes
-     *      - T1 commits
-     *      - T3 writes
-     *      - T2 writes
-     *      - T1 ends
-     *      - T3 writes
-     *      - T2 aborts
+     * - T1 writes
+     * - T2 writes
+     * - T1 commits
+     * - T3 writes
+     * - T2 writes
+     * - T1 ends
+     * - T3 writes
+     * - T2 aborts
      * 2. Simulates db shutdown
      * 3. Runs all three phases of recovery
-     *    Checks:
-     *      - The entire log contains the correct records (see code/comments below for ordering)
-     *      - Checkpoint records are written to the log at the end of recovery
+     * Checks:
+     * - The entire log contains the correct records (see code/comments below for ordering)
+     * - Checkpoint records are written to the log at the end of recovery
      */
     @Test
     @Category(PublicTests.class)
     public void testRestart() {
-        byte[] before = new byte[] { (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00 };
-        byte[] after = new byte[] { (byte) 0xDE, (byte) 0xCA, (byte) 0xFB, (byte) 0xAD };
+        byte[] before = new byte[]{(byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00};
+        byte[] after = new byte[]{(byte) 0xDE, (byte) 0xCA, (byte) 0xFB, (byte) 0xAD};
 
         // 1. Set up a log
         Transaction transaction1 = DummyTransaction.create(1L);
@@ -1360,14 +1372,14 @@ public class TestRecoveryManager {
         Transaction transaction3 = DummyTransaction.create(3L);
         recoveryManager.startTransaction(transaction3);
 
-        long[] LSNs = new long[] { recoveryManager.logPageWrite(1L, 10000000001L, (short) 0, before, after), // 0
-                recoveryManager.logPageWrite(2L, 10000000003L, (short) 0, before, after), // 1
-                recoveryManager.commit(1L), // 2
-                recoveryManager.logPageWrite(3L, 10000000004L, (short) 0, before, after), // 3
-                recoveryManager.logPageWrite(2L, 10000000001L, (short) 0, after, before), // 4
-                recoveryManager.end(1L), // 5
-                recoveryManager.logPageWrite(3L, 10000000002L, (short) 0, before, after), // 6
-                recoveryManager.abort(2), // 7
+        long[] LSNs = new long[]{recoveryManager.logPageWrite(1L, 10000000001L, (short) 0, before, after), // 0
+            recoveryManager.logPageWrite(2L, 10000000003L, (short) 0, before, after), // 1
+            recoveryManager.commit(1L), // 2
+            recoveryManager.logPageWrite(3L, 10000000004L, (short) 0, before, after), // 3
+            recoveryManager.logPageWrite(2L, 10000000001L, (short) 0, after, before), // 4
+            recoveryManager.end(1L), // 5
+            recoveryManager.logPageWrite(3L, 10000000002L, (short) 0, before, after), // 6
+            recoveryManager.abort(2), // 7
         };
 
         // 2. Simulate db shutdown
@@ -1436,8 +1448,8 @@ public class TestRecoveryManager {
     @Test
     @Category(PublicTests.class)
     public void testRestartCleanup() {
-        byte[] before = new byte[] { (byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00 };
-        byte[] after = new byte[] { (byte) 0xBA, (byte) 0xAD, (byte) 0xF0, (byte) 0x0D };
+        byte[] before = new byte[]{(byte) 0x00, (byte) 0x00, (byte) 0x00, (byte) 0x00};
+        byte[] after = new byte[]{(byte) 0xBA, (byte) 0xAD, (byte) 0xF0, (byte) 0x0D};
 
         Transaction transaction1 = DummyTransaction.create(1L);
 
@@ -1446,7 +1458,7 @@ public class TestRecoveryManager {
         long LSN2 = recoveryManager.logPageWrite(1L, 10000000002L, (short) 0, before, after);
 
         logManager.fetchLogRecord(LSN1).redo(recoveryManager, diskSpaceManager,
-                bufferManager);
+            bufferManager);
 
         // flush everything - recovery tests should always start
         // with a clean load from disk, and here we want everything sent to disk first.
@@ -1485,7 +1497,7 @@ public class TestRecoveryManager {
     /**
      * Helper to finish checks for redo. Call this after the redo pass (or undo
      * pass)- if not enough redo calls were performed, an error is thrown.
-     *
+     * <p>
      * If setupRedoChecks is used for the redo pass, and this method is not called
      * before the undo pass, and the undo pass calls undo at least once, an error
      * may be incorrectly thrown.
